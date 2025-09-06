@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
-public class UserRegisterRequest {
+public class RegisterRequest {
 
     @NotBlank(message = "Name is required")
     private String name;
@@ -17,14 +17,16 @@ public class UserRegisterRequest {
     @Email(message = "Email should be valid")
     private String email;
 
+    @NotBlank(message = "Password is required")
+    @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$",
+            message = "Password must be at least 8 characters long, include at least one letter and one number"
+    )
+    private String password;
+
     @NotNull(message = "Role is required")
     private Role role;
 
-    @NotBlank(message = "Telegram username is required")
-    @Pattern(
-            regexp = "^@[a-zA-Z0-9_]{1,64}$",
-            message = "Telegram username must start with @ and contain 1-64 letters, numbers or underscores"
-    )
     private String telegramId;
 
     private Long companyId;
