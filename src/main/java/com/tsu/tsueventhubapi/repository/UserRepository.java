@@ -1,4 +1,4 @@
-﻿package com.tsu.tsueventhubapi.repository;
+package com.tsu.tsueventhubapi.repository;
 
 import com.tsu.tsueventhubapi.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;

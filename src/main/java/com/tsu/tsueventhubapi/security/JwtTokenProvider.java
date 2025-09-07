@@ -1,4 +1,4 @@
-﻿package com.tsu.tsueventhubapi.security;
+package com.tsu.tsueventhubapi.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -14,19 +14,30 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret}")
+    @Value("${JWT_SECRET}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration}")
+    @Value("${JWT_EXPIRATION}")
     private long jwtExpirationMs;
+
+    @Value("${JWT_REFRESH_EXPIRATION}")
+    private long jwtRefreshExpirationMs;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(UserDetails userDetails) {
+        return generateToken(userDetails, jwtExpirationMs);
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return generateToken(userDetails, jwtRefreshExpirationMs);
+    }
+
+    private String generateToken(UserDetails userDetails, long expirationMs) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Date expiryDate = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
@@ -56,5 +67,9 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public long getRefreshExpirationMs() {
+        return jwtRefreshExpirationMs;
     }
 }

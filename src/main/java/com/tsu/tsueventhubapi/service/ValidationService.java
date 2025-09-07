@@ -1,4 +1,4 @@
-﻿package com.tsu.tsueventhubapi.service;
+package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.RegisterRequest;
 import com.tsu.tsueventhubapi.enumeration.Role;
