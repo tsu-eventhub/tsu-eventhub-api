@@ -1,12 +1,18 @@
 package com.tsu.tsueventhubapi.service;
 
+import com.tsu.tsueventhubapi.dto.LoginRequest;
 import com.tsu.tsueventhubapi.dto.RegisterRequest;
 import com.tsu.tsueventhubapi.dto.TokenResponse;
 import com.tsu.tsueventhubapi.enumeration.Status;
+import com.tsu.tsueventhubapi.exception.AuthException;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +28,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final UserDetailsService userDetailsService;
+    private final AuthenticationManager authenticationManager;
 
     public TokenResponse register(RegisterRequest request) {
         validationService.validateRegisterRequest(request);
@@ -53,5 +60,54 @@ public class AuthService {
         );
 
         return new TokenResponse(accessToken, refreshToken);
+    }
+
+    public TokenResponse refresh(String refreshToken) {
+        if (!refreshTokenService.validateRefreshToken(refreshToken)) {
+            throw new AuthException("Invalid or expired refresh token");
+        }
+
+        String email = refreshTokenService.getEmailFromToken(refreshToken);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthException("User not found"));
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+
+        String newAccessToken = jwtTokenProvider.generateToken(userDetails);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        refreshTokenService.deleteRefreshToken(refreshToken);
+        refreshTokenService.storeRefreshToken(
+                newRefreshToken,
+                user.getEmail(),
+                jwtTokenProvider.getRefreshExpirationMs()
+        );
+
+        return new TokenResponse(newAccessToken, newRefreshToken);
+    }
+
+    public TokenResponse login(LoginRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            
+            String accessToken = jwtTokenProvider.generateToken(userDetails);
+            String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+            
+            refreshTokenService.storeRefreshToken(
+                    refreshToken,
+                    request.getEmail(),
+                    jwtTokenProvider.getRefreshExpirationMs()
+            );
+
+            return new TokenResponse(accessToken, refreshToken);
+        } catch (AuthenticationException e) {
+            throw new AuthException("Invalid email or password");
+        }
     }
 }
