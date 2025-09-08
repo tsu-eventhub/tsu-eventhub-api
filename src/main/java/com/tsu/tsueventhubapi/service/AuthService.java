@@ -4,12 +4,12 @@ import com.tsu.tsueventhubapi.dto.LoginRequest;
 import com.tsu.tsueventhubapi.dto.RegisterRequest;
 import com.tsu.tsueventhubapi.dto.TokenResponse;
 import com.tsu.tsueventhubapi.enumeration.Status;
-import com.tsu.tsueventhubapi.exception.AuthException;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -64,13 +64,13 @@ public class AuthService {
 
     public TokenResponse refresh(String refreshToken) {
         if (!refreshTokenService.validateRefreshToken(refreshToken)) {
-            throw new AuthException("Invalid or expired refresh token");
+            throw new RuntimeException("Invalid or expired refresh token");
         }
 
         String email = refreshTokenService.getEmailFromToken(refreshToken);
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
 
@@ -107,7 +107,7 @@ public class AuthService {
 
             return new TokenResponse(accessToken, refreshToken);
         } catch (AuthenticationException e) {
-            throw new AuthException("Invalid email or password");
+            throw new BadCredentialsException("Invalid email or password");
         }
     }
 }
