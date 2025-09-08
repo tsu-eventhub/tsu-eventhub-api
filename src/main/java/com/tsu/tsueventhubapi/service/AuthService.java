@@ -1,8 +1,7 @@
 package com.tsu.tsueventhubapi.service;
 
-import com.tsu.tsueventhubapi.dto.LoginRequest;
-import com.tsu.tsueventhubapi.dto.RegisterRequest;
-import com.tsu.tsueventhubapi.dto.TokenResponse;
+import com.tsu.tsueventhubapi.dto.*;
+import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.enumeration.Status;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
@@ -13,6 +12,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -108,6 +108,36 @@ public class AuthService {
             return new TokenResponse(accessToken, refreshToken);
         } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid email or password");
+        }
+    }
+
+    public UserResponse getCurrentUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (principal instanceof UserDetails userDetails) {
+            String email = userDetails.getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            CompanyResponse companyResponse = null;
+            if (user.getRole() == Role.MANAGER && user.getCompany() != null) {
+                companyResponse = CompanyResponse.builder()
+                        .id(user.getCompany().getId())
+                        .name(user.getCompany().getName())
+                        .build();
+            }
+
+            return UserResponse.builder()
+                    .id(user.getId())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .role(user.getRole())
+                    .status(user.getStatus())
+                    .telegramId(user.getTelegramId())
+                    .company(companyResponse)
+                    .build();
+        } else {
+            throw new RuntimeException("Invalid user session");
         }
     }
 }
