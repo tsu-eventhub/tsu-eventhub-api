@@ -20,7 +20,7 @@ public class RefreshTokenService {
         return redisTemplate.hasKey(token);
     }
 
-    public String getEmailFromToken(String token) {
+    public String getIdFromToken(String token) {
         return redisTemplate.opsForValue().get(token);
     }
 

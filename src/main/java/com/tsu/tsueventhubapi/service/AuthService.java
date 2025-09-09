@@ -1,22 +1,23 @@
 package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.*;
-import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.enumeration.Status;
+import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.JwtTokenProvider;
+import com.tsu.tsueventhubapi.security.UserDetailsImpl;
+import com.tsu.tsueventhubapi.security.UserDetailsImplService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,7 @@ public class AuthService {
     private final ValidationService validationService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
-    private final UserDetailsService userDetailsService;
+    private final UserDetailsImplService userDetailsImplService;
     private final AuthenticationManager authenticationManager;
 
     public TokenResponse register(RegisterRequest request) {
@@ -38,7 +39,7 @@ public class AuthService {
         }
 
         User user = User.builder()
-                .telegramId(request.getTelegramId())
+                .telegramUsername(request.getTelegramUsername())
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -48,14 +49,14 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
+        UserDetailsImpl userDetails = userDetailsImplService.loadUserById(savedUser.getId());
 
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 
         refreshTokenService.storeRefreshToken(
                 refreshToken,
-                savedUser.getEmail(),
+                savedUser.getId().toString(),
                 jwtTokenProvider.getRefreshExpirationMs()
         );
 
@@ -67,12 +68,13 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired refresh token");
         }
 
-        String email = refreshTokenService.getEmailFromToken(refreshToken);
+        String userIdStr = refreshTokenService.getIdFromToken(refreshToken);
+        UUID userId = UUID.fromString(userIdStr);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        UserDetailsImpl userDetails = userDetailsImplService.loadUserById(user.getId());
 
         String newAccessToken = jwtTokenProvider.generateToken(userDetails);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
@@ -80,7 +82,7 @@ public class AuthService {
         refreshTokenService.deleteRefreshToken(refreshToken);
         refreshTokenService.storeRefreshToken(
                 newRefreshToken,
-                user.getEmail(),
+                user.getId().toString(),
                 jwtTokenProvider.getRefreshExpirationMs()
         );
 
@@ -93,8 +95,7 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
 
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             
             String accessToken = jwtTokenProvider.generateToken(userDetails);
             String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);

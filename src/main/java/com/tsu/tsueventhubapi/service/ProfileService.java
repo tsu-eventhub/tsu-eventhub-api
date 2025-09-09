@@ -1,22 +1,25 @@
 package com.tsu.tsueventhubapi.service;
 
-import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.UserResponse;
-import com.tsu.tsueventhubapi.enumeration.Role;
+import com.tsu.tsueventhubapi.exception.ForbiddenException;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
 
     private final UserRepository userRepository;
+    private final ValidationService validationService;
 
     public UserResponse getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -27,22 +30,24 @@ public class ProfileService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        CompanyResponse companyResponse = null;
-        if (user.getRole() == Role.MANAGER && user.getCompany() != null) {
-            companyResponse = CompanyResponse.builder()
-                    .id(user.getCompany().getId())
-                    .name(user.getCompany().getName())
-                    .build();
+        return UserResponse.fromEntity(user);
+    }
+
+    @Transactional
+    public User updateProfile(UUID userId, String newName, String newEmail, String telegramUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!user.isApproved()) {
+            throw new ForbiddenException("Profile editing is allowed only for approved accounts");
         }
 
-        return UserResponse.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .status(user.getStatus())
-                .telegramId(user.getTelegramId())
-                .company(companyResponse)
-                .build();
+        validationService.validateProfileUpdate(user.getRole(), telegramUsername);
+
+        user.setName(newName);
+        user.setEmail(newEmail);
+        user.setTelegramUsername(telegramUsername);
+
+        return userRepository.save(user);
     }
 }
