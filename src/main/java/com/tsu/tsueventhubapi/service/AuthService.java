@@ -30,6 +30,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final UserDetailsImplService userDetailsImplService;
     private final AuthenticationManager authenticationManager;
+    private final ApprovalService approvalService;
 
     public TokenResponse register(RegisterRequest request) {
         validationService.validateRegisterRequest(request);
@@ -44,10 +45,12 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
-                .status(Status.REGISTERED)
+                .status(Status.PENDING)
                 .build();
 
         User savedUser = userRepository.save(user);
+
+        approvalService.createApprovalRequest(savedUser);
 
         UserDetailsImpl userDetails = userDetailsImplService.loadUserById(savedUser.getId());
 
