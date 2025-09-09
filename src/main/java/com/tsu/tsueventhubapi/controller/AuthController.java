@@ -58,21 +58,4 @@ public class AuthController {
     public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
-
-    @GetMapping("/me")
-    @Operation(
-            summary = "Получение текущего пользователя", 
-            description = "Возвращает данные текущего авторизованного пользователя",
-            security = @SecurityRequirement(name = "bearerAuth")
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Данные пользователя успешно получены",
-                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Неавторизован",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    public UserResponse getMe() {
-        return authService.getCurrentUser();
-    }
-
 }

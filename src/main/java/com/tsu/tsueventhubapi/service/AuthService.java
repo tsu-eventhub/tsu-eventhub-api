@@ -110,34 +110,4 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
     }
-
-    public UserResponse getCurrentUser() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        if (principal instanceof UserDetails userDetails) {
-            String email = userDetails.getUsername();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            CompanyResponse companyResponse = null;
-            if (user.getRole() == Role.MANAGER && user.getCompany() != null) {
-                companyResponse = CompanyResponse.builder()
-                        .id(user.getCompany().getId())
-                        .name(user.getCompany().getName())
-                        .build();
-            }
-
-            return UserResponse.builder()
-                    .id(user.getId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .role(user.getRole())
-                    .status(user.getStatus())
-                    .telegramId(user.getTelegramId())
-                    .company(companyResponse)
-                    .build();
-        } else {
-            throw new RuntimeException("Invalid user session");
-        }
-    }
 }
