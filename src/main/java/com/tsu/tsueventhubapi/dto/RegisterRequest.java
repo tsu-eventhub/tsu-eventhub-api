@@ -27,7 +27,7 @@ public class RegisterRequest {
     @NotNull(message = "Role is required")
     private Role role;
 
-    private String telegramId;
+    private String telegramUsername;
 
     private Long companyId;
 }

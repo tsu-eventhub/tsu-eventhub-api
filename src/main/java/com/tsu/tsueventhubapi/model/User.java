@@ -24,7 +24,7 @@ public class User {
     private UUID id;
 
     @Column
-    private String telegramId;
+    private String telegramUsername;
 
     @Column(nullable = false)
     private String name;
