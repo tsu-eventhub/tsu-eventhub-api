@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 public class PendingUserResponse {
-    private UUID id;
+    private UUID requestId;
     private String name;
     private String email;
     private Role role;

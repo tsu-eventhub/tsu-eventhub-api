@@ -30,12 +30,15 @@ public class ApprovalService {
         approvalRequestRepository.save(request);
     }
 
-    public void approveRequest(User currentUser, UUID targetUserId) {
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Target user not found"));
+    public void approveRequest(User currentUser, UUID requestId) {
+        ApprovalRequest request = approvalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
 
-        ApprovalRequest request = approvalRequestRepository.findByUser(targetUser)
-                .orElseThrow(() -> new ResourceNotFoundException("Approval request not found for user"));
+        if (request.isProcessed()) {
+            throw new IllegalStateException("This request has already been processed");
+        }
+
+        User targetUser = request.getUser();
 
         if (currentUser.getId().equals(targetUser.getId())) {
             throw new ForbiddenException("You cannot approve yourself");
@@ -52,4 +55,33 @@ public class ApprovalService {
         targetUser.setStatus(Status.APPROVED);
         userRepository.save(targetUser);
     }
+
+    public void rejectRequest(User currentUser, UUID requestId, String reason) {
+        ApprovalRequest request = approvalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+
+        if (request.isProcessed()) {
+            throw new IllegalStateException("This request has already been processed");
+        }
+
+        User targetUser = request.getUser();
+
+        if (currentUser.getId().equals(targetUser.getId())) {
+            throw new ForbiddenException("You cannot reject yourself");
+        }
+
+        if (currentUser.getRole().name().equals("MANAGER") &&
+                currentUser.getStatus().name().equals("PENDING")) {
+            throw new ForbiddenException("A manager with PENDING status cannot reject other users");
+        }
+        
+        request.setProcessed(true);
+        request.setRejectionReason(reason);
+        approvalRequestRepository.save(request);
+
+        targetUser.setStatus(Status.REJECTED);
+        targetUser.setDeletedAt(Instant.now());
+        userRepository.save(targetUser);
+    }
+
 }

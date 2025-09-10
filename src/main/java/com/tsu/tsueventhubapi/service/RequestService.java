@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class RequestService {
 
     private final ApprovalService approvalService;
     private final UserRepository userRepository;
@@ -31,8 +31,7 @@ public class UserService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
         User currentUser = userRepository.findById(userDetails.getId()).orElseThrow();
-
-
+        
         if (currentUser.getRole().name().equals("DEAN")) {
             requests = approvalRequestRepository.findByProcessedFalse();
         } else if (currentUser.getRole().name().equals("MANAGER")) {
@@ -45,8 +44,9 @@ public class UserService {
         }
 
         return requests.stream()
+                .filter(r -> r.getUser().getDeletedAt() == null)
                 .map(r -> new PendingUserResponse(
-                        r.getUser().getId(),
+                        r.getId(),
                         r.getUser().getName(),
                         r.getUser().getEmail(),
                         r.getUser().getRole(),
@@ -56,12 +56,22 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public void approveUser(UUID userId) {
+    public void approveUser(UUID requestId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
         User currentUser = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
         
-        approvalService.approveRequest(currentUser, userId);
+        approvalService.approveRequest(currentUser, requestId);
     }
+
+    public void rejectUser(UUID requestId, String reason) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
+        User currentUser = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+
+        approvalService.rejectRequest(currentUser, requestId, reason);
+    }
+
 }

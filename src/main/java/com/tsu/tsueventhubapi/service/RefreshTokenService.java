@@ -12,8 +12,8 @@ public class RefreshTokenService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    public void storeRefreshToken(String token, String email, long expirationMs) {
-        redisTemplate.opsForValue().set(token, email, expirationMs, TimeUnit.MILLISECONDS);
+    public void storeRefreshToken(String token, String id, long expirationMs) {
+        redisTemplate.opsForValue().set(token, id, expirationMs, TimeUnit.MILLISECONDS);
     }
 
     public boolean validateRefreshToken(String token) {

@@ -1,8 +1,9 @@
 package com.tsu.tsueventhubapi.controller;
 
 import com.tsu.tsueventhubapi.dto.PendingUserResponse;
+import com.tsu.tsueventhubapi.dto.RejectRequestDto;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
-import com.tsu.tsueventhubapi.service.UserService;
+import com.tsu.tsueventhubapi.service.RequestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,13 +19,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@RequestMapping("/users")
-@Tag(name = "Users")
+@RequestMapping("/requests")
+@Tag(name = "Requests")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
-public class UserController {
-    private final UserService userService;
+public class RequestController {
+    private final RequestService requestService;
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('DEAN','MANAGER')")
@@ -52,10 +53,10 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public List<PendingUserResponse> getPendingUsers() {
-        return userService.getPendingUsers();
+        return requestService.getPendingUsers();
     }
 
-    @PostMapping("/{userId}/approve")
+    @PostMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('DEAN','MANAGER')")
     @Operation(
             summary = "Подтверждение заявки пользователя",
@@ -74,8 +75,35 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public ResponseEntity<Void> approveUser(@PathVariable("userId") UUID requestId) {
-        userService.approveUser(requestId);
+    public ResponseEntity<Void> approveUser(@PathVariable("id") UUID requestId) {
+        requestService.approveUser(requestId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('DEAN','MANAGER')")
+    @Operation(
+            summary = "Отклонение заявки пользователя",
+            description = "Позволяет деканату или подтверждённому менеджеру отклонить заявку пользователя с указанием причины."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Заявка пользователя успешно отклонена"),
+            @ApiResponse(responseCode = "400", description = "Заявка пользователя уже была обработана",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403",
+                    description = "Доступ запрещён (например, менеджер с PENDING статусом пытается отклонить себя)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Заявка не найдена",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Void> rejectUser(@PathVariable("id") UUID requestId,
+                                           @RequestBody(required = false) RejectRequestDto requestDto) {
+        String reason = requestDto != null ? requestDto.getReason() : null;
+        requestService.rejectUser(requestId, reason);
         return ResponseEntity.ok().build();
     }
 }

@@ -28,4 +28,6 @@ public class ApprovalRequest {
     private Instant createdAt;
 
     private boolean processed;
+
+    private String rejectionReason;
 }

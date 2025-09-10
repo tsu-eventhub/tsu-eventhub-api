@@ -105,7 +105,7 @@ public class AuthService {
             
             refreshTokenService.storeRefreshToken(
                     refreshToken,
-                    request.getEmail(),
+                    userDetails.getId().toString(),
                     jwtTokenProvider.getRefreshExpirationMs()
             );
 
