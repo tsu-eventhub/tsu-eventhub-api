@@ -2,29 +2,29 @@ package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.PendingUserResponse;
 import com.tsu.tsueventhubapi.exception.ForbiddenException;
+import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.ApprovalRequest;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.ApprovalRequestRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
+    private final ApprovalService approvalService;
     private final UserRepository userRepository;
     private final ApprovalRequestRepository approvalRequestRepository;
-
-    public UserService(UserRepository userRepository, ApprovalRequestRepository approvalRequestRepository) {
-        this.userRepository = userRepository;
-        this.approvalRequestRepository = approvalRequestRepository;
-    }
-
+    
     public List<PendingUserResponse> getPendingUsers() {
         List<ApprovalRequest> requests;
 
@@ -54,5 +54,14 @@ public class UserService {
                         r.getUser().getCompany() != null ? r.getUser().getCompany().getName() : null
                 ))
                 .collect(Collectors.toList());
+    }
+
+    public void approveUser(UUID userId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
+        User currentUser = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+        
+        approvalService.approveRequest(currentUser, userId);
     }
 }
