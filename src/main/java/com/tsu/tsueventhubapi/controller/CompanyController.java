@@ -21,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/companies")
@@ -54,6 +55,11 @@ public class CompanyController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (менеджер или студент уже зарегистрированы)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Внутренняя ошибка сервера",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
@@ -62,13 +68,10 @@ public class CompanyController {
     public ResponseEntity<List<CompanyResponse>> getCompanies(@AuthenticationPrincipal UserDetailsImpl currentUser) {
         List<CompanyResponse> companies;
 
-        if (currentUser == null) {
-            companies = companyService.getCompaniesForRegistration();
-        } else if (currentUser.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_DEAN"))) {
+        if (currentUser != null) {
             companies = companyService.getCompaniesForUser(currentUser.getId());
         } else {
-            companies = List.of();
+            companies = companyService.getCompaniesForRegistration();
         }
 
         return ResponseEntity.ok(companies);
@@ -113,5 +116,47 @@ public class CompanyController {
 
         CompanyResponse company = companyService.createCompany(request);
         return ResponseEntity.status(200).body(company);
+    }
+
+    @GetMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('DEAN') or hasRole('MANAGER')")
+    @Operation(
+            summary = "Получение информации о компании по ID",
+            description = "Позволяет получить данные конкретной компании. Доступно для DEAN и MANAGER (только если компания закреплена за ним)"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Информация о компании успешно получена",
+                    content = @Content(schema = @Schema(implementation = CompanyResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (например, MANAGER пытается получить чужую компанию)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Компания не найдена",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<CompanyResponse> getCompanyById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        CompanyResponse company = companyService.getCompanyByIdForUser(id, currentUser);
+        return ResponseEntity.ok(company);
     }
 }

@@ -3,11 +3,13 @@ package com.tsu.tsueventhubapi.service;
 import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.CreateCompanyRequest;
 import com.tsu.tsueventhubapi.enumeration.Role;
+import com.tsu.tsueventhubapi.exception.ForbiddenException;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.CompanyRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
+import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,11 @@ public class CompanyService {
         if (user.getRole() == Role.DEAN) {
             return getAllCompanies();
         }
+
+        if (user.getRole() == Role.MANAGER || user.getRole() == Role.STUDENT) {
+            throw new ForbiddenException("Access Denied");
+        }
+        
         return List.of();
     }
 
@@ -58,6 +65,34 @@ public class CompanyService {
         return CompanyResponse.builder()
                 .id(saved.getId())
                 .name(saved.getName())
+                .build();
+    }
+
+    public CompanyResponse getCompanyByIdForUser(UUID companyId, UserDetailsImpl currentUser) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        if (user.getRole() == Role.DEAN) {
+            return toResponse(company);
+        }
+
+        if (user.getRole() == Role.MANAGER) {
+            if (user.getCompany() == null || !user.getCompany().getId().equals(companyId)) {
+                throw new ForbiddenException("Access Denied");
+            }
+            return toResponse(company);
+        }
+        
+        throw new ForbiddenException("Access denied");
+    }
+
+    private CompanyResponse toResponse(Company company) {
+        return CompanyResponse.builder()
+                .id(company.getId())
+                .name(company.getName())
                 .build();
     }
 }
