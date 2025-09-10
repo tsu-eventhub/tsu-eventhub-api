@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
 public class RegisterRequest {
 
@@ -29,5 +31,5 @@ public class RegisterRequest {
 
     private String telegramUsername;
 
-    private Long companyId;
+    private UUID companyId;
 }

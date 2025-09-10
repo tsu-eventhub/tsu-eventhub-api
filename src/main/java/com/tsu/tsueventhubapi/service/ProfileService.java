@@ -7,9 +7,6 @@ import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -21,13 +18,8 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ValidationService validationService;
 
-    public UserResponse getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
-
-        User user = userRepository.findByEmail(email)
+    public UserResponse getCurrentUser(UUID userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return UserResponse.fromEntity(user);
