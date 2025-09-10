@@ -33,7 +33,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 60)
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -50,8 +50,7 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private GoogleAccount googleAccount;
-
-    @Column(name = "deleted_at")
+    
     private Instant deletedAt;
 
     public boolean isApproved() {

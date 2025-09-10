@@ -1,9 +1,12 @@
 package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.*;
+import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.enumeration.Status;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
+import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.User;
+import com.tsu.tsueventhubapi.repository.CompanyRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.JwtTokenProvider;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final ValidationService validationService;
     private final JwtTokenProvider jwtTokenProvider;
@@ -39,16 +43,29 @@ public class AuthService {
             throw new RuntimeException("Email already exists");
         }
 
-        User user = User.builder()
+        if (request.getRole() == Role.MANAGER && request.getCompanyId() == null) {
+            throw new IllegalArgumentException("Manager must select a company");
+        }
+
+        if (request.getCompanyId() != null && request.getRole() != Role.MANAGER) {
+            throw new IllegalArgumentException("Only MANAGER users can be linked to a company");
+        }
+
+        User.UserBuilder userBuilder = User.builder()
                 .telegramUsername(request.getTelegramUsername())
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
-                .status(Status.PENDING)
-                .build();
+                .status(Status.PENDING);
 
-        User savedUser = userRepository.save(user);
+        if (request.getCompanyId() != null) {
+            Company company = companyRepository.findById(request.getCompanyId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+            userBuilder.company(company);
+        }
+
+        User savedUser = userRepository.save(userBuilder.build());
 
         approvalService.createApprovalRequest(savedUser);
 

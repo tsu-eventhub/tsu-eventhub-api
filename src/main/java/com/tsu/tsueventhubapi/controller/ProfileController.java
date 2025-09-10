@@ -54,8 +54,8 @@ public class ProfileController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public UserResponse getProfile() {
-        return profileService.getCurrentUser();
+    public UserResponse getProfile(@AuthenticationPrincipal UserDetailsImpl currentUser) {
+        return profileService.getCurrentUser(currentUser.getId());
     }
 
     @PutMapping
