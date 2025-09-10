@@ -1,8 +1,10 @@
 package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.CompanyResponse;
+import com.tsu.tsueventhubapi.dto.CreateCompanyRequest;
 import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
+import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.CompanyRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
@@ -30,12 +32,6 @@ public class CompanyService {
         if (user.getRole() == Role.DEAN) {
             return getAllCompanies();
         }
-
-        if (user.getRole() == Role.MANAGER) {
-            if (user.getCompany() != null) return List.of();
-            return getAllCompanies();
-        }
-
         return List.of();
     }
 
@@ -50,5 +46,18 @@ public class CompanyService {
                         .name(c.getName())
                         .build())
                 .toList();
+    }
+
+    public CompanyResponse createCompany(CreateCompanyRequest request) {
+        Company company = Company.builder()
+                .name(request.getName())
+                .build();
+
+        Company saved = companyRepository.save(company);
+
+        return CompanyResponse.builder()
+                .id(saved.getId())
+                .name(saved.getName())
+                .build();
     }
 }
