@@ -3,6 +3,7 @@ package com.tsu.tsueventhubapi.controller;
 
 import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.CreateCompanyRequest;
+import com.tsu.tsueventhubapi.dto.UpdateCompanyRequest;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.CompanyService;
@@ -158,5 +159,52 @@ public class CompanyController {
 
         CompanyResponse company = companyService.getCompanyByIdForUser(id, currentUser);
         return ResponseEntity.ok(company);
+    }
+
+    @PutMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('DEAN')")
+    @Operation(
+            summary = "Редактирование компании",
+            description = "Позволяет деканату изменить название компании по её ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Компания успешно обновлена",
+                    content = @Content(schema = @Schema(implementation = CompanyResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Ошибка валидации данных",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (требуется роль DEAN)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Компания не найдена",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<CompanyResponse> updateCompany(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCompanyRequest request) {
+
+        CompanyResponse updatedCompany = companyService.updateCompany(id, request);
+        return ResponseEntity.ok(updatedCompany);
     }
 }

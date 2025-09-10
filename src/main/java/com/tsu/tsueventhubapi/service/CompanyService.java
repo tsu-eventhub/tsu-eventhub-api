@@ -2,6 +2,7 @@ package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.CreateCompanyRequest;
+import com.tsu.tsueventhubapi.dto.UpdateCompanyRequest;
 import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.exception.ForbiddenException;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
@@ -62,10 +63,7 @@ public class CompanyService {
 
         Company saved = companyRepository.save(company);
 
-        return CompanyResponse.builder()
-                .id(saved.getId())
-                .name(saved.getName())
-                .build();
+        return toResponse(saved);
     }
 
     public CompanyResponse getCompanyByIdForUser(UUID companyId, UserDetailsImpl currentUser) {
@@ -86,8 +84,19 @@ public class CompanyService {
             return toResponse(company);
         }
         
-        throw new ForbiddenException("Access denied");
+        throw new ForbiddenException("Access Denied");
     }
+
+    public CompanyResponse updateCompany(UUID companyId, UpdateCompanyRequest request) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        company.setName(request.getName());
+        Company updated = companyRepository.save(company);
+
+        return toResponse(updated);
+    }
+
 
     private CompanyResponse toResponse(Company company) {
         return CompanyResponse.builder()
