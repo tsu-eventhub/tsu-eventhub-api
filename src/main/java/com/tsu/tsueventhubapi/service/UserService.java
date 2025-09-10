@@ -36,6 +36,9 @@ public class UserService {
         if (currentUser.getRole().name().equals("DEAN")) {
             requests = approvalRequestRepository.findByProcessedFalse();
         } else if (currentUser.getRole().name().equals("MANAGER")) {
+            if (!currentUser.getStatus().name().equals("APPROVED")) {
+                throw new ForbiddenException("Pending managers cannot approve users");
+            }
             requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany());
         } else {
             throw new ForbiddenException("Access Denied");
