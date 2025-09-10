@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EventResponse {
+public class EventResponseFull {
     private UUID id;
     private String title;
     private String description;
@@ -21,5 +21,5 @@ public class EventResponse {
     private Instant endTime;
     private String location;
     private Instant registrationDeadline;
-    private UUID companyId;
+    private CompanyResponse company;
 }

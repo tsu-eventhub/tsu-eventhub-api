@@ -1,7 +1,10 @@
 package com.tsu.tsueventhubapi.service;
 
+import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.CreateEventRequest;
-import com.tsu.tsueventhubapi.dto.EventResponse;
+import com.tsu.tsueventhubapi.dto.EventResponseFull;
+import com.tsu.tsueventhubapi.dto.EventResponseSummary;
+import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.Event;
 import com.tsu.tsueventhubapi.model.User;
@@ -20,9 +23,9 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
-    public List<EventResponse> getAllEvents(UUID userId) {
+    public List<EventResponseSummary> getAllEvents(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         List<Event> events;
         
@@ -37,13 +40,13 @@ public class EventService {
         }
 
         return events.stream()
-                .map(this::toResponse)
+                .map(this::toSummaryResponse)
                 .toList();
     }
 
-    public EventResponse createEvent(CreateEventRequest request, UUID managerId) {
+    public EventResponseFull createEvent(CreateEventRequest request, UUID managerId) {
         User manager = userRepository.findById(managerId)
-                .orElseThrow(() -> new IllegalArgumentException("Manager not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
         
         Company company = manager.getCompany();
         if (company == null) {
@@ -66,8 +69,37 @@ public class EventService {
         return toResponse(saved);
     }
 
-    private EventResponse toResponse(Event event) {
-        return EventResponse.builder()
+    public EventResponseFull getEventById(UUID eventId, UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        
+        if (user.getRole().toString().contains("MANAGER")) {
+            Company company = user.getCompany();
+            if (company == null || !company.getId().equals(event.getCompany().getId())) {
+                throw new IllegalStateException("Manager can only view events from their own company");
+            }
+        }
+
+        return toFullResponse(event);
+    }
+    
+    private EventResponseSummary toSummaryResponse(Event event) {
+        return EventResponseSummary.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .startTime(event.getStartTime())
+                .location(event.getLocation())
+                .company(event.getCompany() != null
+                        ? new CompanyResponse(event.getCompany().getId(), event.getCompany().getName())
+                        : null)
+                .build();
+    }
+    
+    private EventResponseFull toFullResponse(Event event) {
+        return EventResponseFull.builder()
                 .id(event.getId())
                 .title(event.getTitle())
                 .description(event.getDescription())
@@ -75,7 +107,24 @@ public class EventService {
                 .endTime(event.getEndTime())
                 .location(event.getLocation())
                 .registrationDeadline(event.getRegistrationDeadline())
-                .companyId(event.getCompany() != null ? event.getCompany().getId() : null)
+                .company(event.getCompany() != null
+                        ? new CompanyResponse(event.getCompany().getId(), event.getCompany().getName())
+                        : null)
+                .build();
+    }
+
+    private EventResponseFull toResponse(Event event) {
+        return EventResponseFull.builder()
+                .id(event.getId())
+                .title(event.getTitle())
+                .description(event.getDescription())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
+                .location(event.getLocation())
+                .registrationDeadline(event.getRegistrationDeadline())
+                .company(event.getCompany() != null
+                        ? new CompanyResponse(event.getCompany().getId(), event.getCompany().getName())
+                        : null)
                 .build();
     }
 

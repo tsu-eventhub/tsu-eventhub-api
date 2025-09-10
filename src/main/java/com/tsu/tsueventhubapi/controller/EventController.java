@@ -1,7 +1,8 @@
 package com.tsu.tsueventhubapi.controller;
 
 import com.tsu.tsueventhubapi.dto.CreateEventRequest;
-import com.tsu.tsueventhubapi.dto.EventResponse;
+import com.tsu.tsueventhubapi.dto.EventResponseFull;
+import com.tsu.tsueventhubapi.dto.EventResponseSummary;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.EventService;
@@ -20,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/events")
@@ -44,7 +46,7 @@ public class EventController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Список событий успешно получен",
-                    content = @Content(schema = @Schema(implementation = EventResponse.class))
+                    content = @Content(schema = @Schema(implementation = EventResponseSummary.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -57,7 +59,7 @@ public class EventController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<List<EventResponse>> getAllEvents(@AuthenticationPrincipal UserDetailsImpl currentUser) {
+    public ResponseEntity<List<EventResponseSummary>> getAllEvents(@AuthenticationPrincipal UserDetailsImpl currentUser) {
         return ResponseEntity.ok(eventService.getAllEvents(currentUser.getId()));
     }
 
@@ -71,7 +73,7 @@ public class EventController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Событие успешно создано",
-                    content = @Content(schema = @Schema(implementation = EventResponse.class))
+                    content = @Content(schema = @Schema(implementation = EventResponseFull.class))
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -94,12 +96,56 @@ public class EventController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<EventResponse> createEvent(
+    public ResponseEntity<EventResponseFull> createEvent(
             @Valid @RequestBody CreateEventRequest request,
             @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
-        EventResponse response = eventService.createEvent(request, currentUser.getId());
+        EventResponseFull response = eventService.createEvent(request, currentUser.getId());
         return ResponseEntity.ok(response);
     }
-    
+
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Детали события",
+            description = """
+            Позволяет получить полную информацию о конкретном событии по его ID.
+            Менеджеры видят только события своей компании.
+            Остальные авторизованные пользователи видят все события.
+            """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Информация о событии успешно получена",
+                    content = @Content(schema = @Schema(implementation = EventResponseFull.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (менеджер пытается получить событие чужой компании)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Событие не найдено",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<EventResponseFull> getEventById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        EventResponseFull event = eventService.getEventById(id, currentUser.getId());
+        return ResponseEntity.ok(event);
+    }
 }
