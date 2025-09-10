@@ -3,6 +3,8 @@ package com.tsu.tsueventhubapi.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,13 +39,36 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleJsonParseError(HttpMessageNotReadableException ex,
+                                                              HttpServletRequest request) {
+        ex.getMostSpecificCause();
+        String rawMessage = ex.getMostSpecificCause().getMessage();
+        
+        String simplifiedMessage;
+        if (rawMessage.contains("Unexpected character")) {
+            simplifiedMessage = "Invalid JSON format: unexpected character in request body";
+        } else if (rawMessage.contains("Missing field")) {
+            simplifiedMessage = "Invalid JSON format: missing required field";
+        } else {
+            simplifiedMessage = "Invalid JSON format";
+        }
+
+        return buildResponse(HttpStatus.BAD_REQUEST, simplifiedMessage, request);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ErrorResponse> handleRuntime(ForbiddenException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 

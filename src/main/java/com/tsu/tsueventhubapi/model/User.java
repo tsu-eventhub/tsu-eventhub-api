@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -49,6 +50,9 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private GoogleAccount googleAccount;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     public boolean isApproved() {
         return this.status == Status.APPROVED;
