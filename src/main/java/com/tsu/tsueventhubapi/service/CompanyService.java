@@ -97,6 +97,12 @@ public class CompanyService {
         return toResponse(updated);
     }
 
+    public void deleteCompany(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        companyRepository.delete(company);
+    }
 
     private CompanyResponse toResponse(Company company) {
         return CompanyResponse.builder()

@@ -207,4 +207,42 @@ public class CompanyController {
         CompanyResponse updatedCompany = companyService.updateCompany(id, request);
         return ResponseEntity.ok(updatedCompany);
     }
+
+    @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('DEAN')")
+    @Operation(
+            summary = "Удаление компании",
+            description = "Позволяет деканату удалить компанию по ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Компания успешно удалена"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (требуется роль DEAN)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Компания не найдена",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<Void> deleteCompany(@PathVariable UUID id) {
+        companyService.deleteCompany(id);
+        return ResponseEntity.ok().build();
+    }
 }
