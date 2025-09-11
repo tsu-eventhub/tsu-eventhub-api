@@ -1,0 +1,111 @@
+﻿name: TSU EventHub API CI/CD
+
+on:
+  push:
+    branches: [main]
+
+env:
+  JAVA_VERSION: '21'
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/tsu-eventhub-api
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: eventhub-db
+          POSTGRES_USER: tsu
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tsu -d eventhub-db" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+
+      - name: 📦 Build and run tests
+        run: mvn clean package
+
+      - name: 📁 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-artifacts
+          path: target/*.jar
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🐳 Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.run_number }}
+
+      - name: 🚀 Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: deployuser
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "📦 Backup previous container..."
+            docker tag tsu-eventhub-api tsu-eventhub-api-backup || true
+
+            echo "📥 Pull latest image..."
+            docker pull ${{ env.DOCKER_IMAGE }}:latest
+
+            echo "🛑 Stop and remove current container..."
+            docker stop tsu-eventhub-api || true
+            docker rm tsu-eventhub-api || true
+
+            echo "🚀 Start new container..."
+            docker run -d --name tsu-eventhub-api -p 8080:8080 \
+              --env-file /home/deployuser/tsu-eventhub.env \
+              --network tsu-eventhub_net ${{ env.DOCKER_IMAGE }}:latest
+
+      - name: 🛠 Rollback if deployment fails
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: deployuser
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "⚠️ Deployment failed. Rollback..."
+            docker stop tsu-eventhub-api || true
+            docker rm tsu-eventhub-api || true
+            docker run -d --name tsu-eventhub-api -p 8080:8080 \
+              --env-file /home/deployuser/tsu-eventhub.env \
+              --network tsu-eventhub_net tsu-eventhub-api-backup
