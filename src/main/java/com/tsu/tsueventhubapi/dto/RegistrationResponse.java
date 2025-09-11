@@ -16,4 +16,5 @@ public class RegistrationResponse {
     private UUID eventId;
     private UUID studentId;
     private Instant registeredAt;
+    private Instant unregisteredAt;
 }

@@ -298,8 +298,7 @@ public class EventController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
-                    description = "Регистрация успешна",
-                    content = @Content(schema = @Schema(implementation = RegistrationResponse.class))
+                    description = "Регистрация успешна"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -327,11 +326,57 @@ public class EventController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<RegistrationResponse> registerForEvent(
+    public ResponseEntity<Void> registerForEvent(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
-        RegistrationResponse response = eventService.registerStudent(id, currentUser.getId());
-        return ResponseEntity.ok(response);
+        eventService.registerStudent(id, currentUser.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/unregister")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(
+            summary = "Отменить запись на событие",
+            description = """
+            Позволяет студенту отменить свою регистрацию на конкретное событие.
+
+            Правила:
+            - Студент может отменить запись только если он ранее зарегистрировался.
+            - Отмена невозможна, если событие уже началось или завершилось.
+            """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Регистрация успешно отменена"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Ошибка валидации (например, студент не зарегистрирован или событие уже началось)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Событие не найдено",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<Void> unregisterFromEvent(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        eventService.unregisterStudent(id, currentUser.getId());
+        return ResponseEntity.ok().build();
     }
 }

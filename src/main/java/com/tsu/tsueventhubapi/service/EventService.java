@@ -153,6 +153,7 @@ public class EventService {
         }
 
         return event.getRegistrations().stream()
+                .filter(reg -> reg.getUnregisteredAt() == null)
                 .map(reg -> {
                     User student = reg.getStudent();
                     return StudentResponse.builder()
@@ -181,20 +182,55 @@ public class EventService {
         }
 
         registrationRepository.findByStudentIdAndEventId(studentId, eventId)
-                .ifPresent(r -> { throw new IllegalStateException("Student is already registered"); });
-
-        Registration registration = Registration.builder()
-                .student(student)
-                .event(event)
-                .registeredAt(now)
-                .build();
-
-        registrationRepository.save(registration);
+                .ifPresentOrElse(registration -> {
+                    if (registration.getUnregisteredAt() == null) {
+                        throw new IllegalStateException("Student is already registered");
+                    } else {
+                        registration.setUnregisteredAt(null);
+                        registration.setRegisteredAt(now);
+                        registrationRepository.save(registration);
+                    }
+                }, () -> {
+                    Registration registration = Registration.builder()
+                            .student(student)
+                            .event(event)
+                            .registeredAt(now)
+                            .build();
+                    registrationRepository.save(registration);
+                });
 
         return RegistrationResponse.builder()
                 .eventId(event.getId())
                 .studentId(student.getId())
                 .registeredAt(now)
+                .build();
+    }
+
+    public RegistrationResponse unregisterStudent(UUID eventId, UUID studentId) {
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        Registration registration = registrationRepository.findByStudentIdAndEventId(student.getId(), event.getId())
+                .orElseThrow(() -> new IllegalArgumentException("You are not registered for this event"));
+        
+        if (registration.getUnregisteredAt() != null) {
+            throw new IllegalArgumentException("You have already unregistered from this event");
+        }
+        
+        if (event.getStartTime() != null && Instant.now().isAfter(event.getStartTime())) {
+            throw new IllegalArgumentException("Cannot unregister after the event has started");
+        }
+
+        registration.setUnregisteredAt(Instant.now());
+        registrationRepository.save(registration);
+
+        return RegistrationResponse.builder()
+                .eventId(event.getId())
+                .studentId(student.getId())
+                .unregisteredAt(registration.getUnregisteredAt())
                 .build();
     }
 

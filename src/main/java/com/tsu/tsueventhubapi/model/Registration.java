@@ -33,4 +33,7 @@ public class Registration {
 
     @Column(nullable = false)
     private Instant registeredAt;
+
+    @Column()
+    private Instant unregisteredAt;
 }
