@@ -1,9 +1,6 @@
 package com.tsu.tsueventhubapi.controller;
 
-import com.tsu.tsueventhubapi.dto.CreateEventRequest;
-import com.tsu.tsueventhubapi.dto.EventResponseFull;
-import com.tsu.tsueventhubapi.dto.EventResponseSummary;
-import com.tsu.tsueventhubapi.dto.UpdateEventRequest;
+import com.tsu.tsueventhubapi.dto.*;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.EventService;
@@ -201,7 +198,9 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Удаление события", description = "Удаление события менеджером (через TelegramBot)")
+    @Operation(
+            summary = "Удаление события", 
+            description = "Удаление события менеджером (через TelegramBot)")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200", 
@@ -233,7 +232,51 @@ public class EventController {
     public ResponseEntity<Void> deleteEvent(
             @PathVariable UUID id, 
             @AuthenticationPrincipal UserDetailsImpl currentUser) {
-        eventService.deleteEvent(id,  currentUser.getId());
+        eventService.deleteEvent(id, currentUser.getId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/students")
+    @PreAuthorize("hasAnyRole('MANAGER', 'DEAN')")
+    @Operation(
+            summary = "Список студентов события",
+            description = """
+            Позволяет получить список студентов, зарегистрированных на событие.
+            
+            - Менеджеры могут просматривать студентов только для событий, которые они создали.
+            - Деканат может просматривать студентов для любых событий.
+            """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Список студентов успешно получен",
+                    content = @Content(schema = @Schema(implementation = StudentResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (менеджер пытается получить студентов чужого события)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Событие не найдено",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<List<StudentResponse>> getStudents(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+        return ResponseEntity.ok(eventService.getStudentsForEvent(id, currentUser.getId()));
     }
 }

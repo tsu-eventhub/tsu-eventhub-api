@@ -1,6 +1,7 @@
 package com.tsu.tsueventhubapi.service;
 
 import com.tsu.tsueventhubapi.dto.*;
+import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.Event;
@@ -134,6 +135,30 @@ public class EventService {
         }
 
         eventRepository.delete(event);
+    }
+
+    public List<StudentResponse> getStudentsForEvent(UUID eventId, UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        if (user.getRole() == Role.MANAGER &&
+                !event.getManager().getId().equals(user.getId())) {
+            throw new SecurityException("You cannot access students of an event you did not create");
+        }
+
+        return event.getRegistrations().stream()
+                .map(reg -> {
+                    User student = reg.getStudent();
+                    return StudentResponse.builder()
+                            .id(student.getId())
+                            .name(student.getName())
+                            .email(student.getEmail())
+                            .build();
+                })
+                .toList();
     }
 
     private void validateEventTimes(Event event) {
