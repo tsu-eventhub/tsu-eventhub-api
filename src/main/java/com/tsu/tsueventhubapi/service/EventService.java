@@ -165,7 +165,7 @@ public class EventService {
                 .toList();
     }
 
-    public RegistrationResponse registerStudent(UUID eventId, UUID studentId) {
+    public void registerStudent(UUID eventId, UUID studentId) {
         User student = userRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
@@ -198,15 +198,9 @@ public class EventService {
                             .build();
                     registrationRepository.save(registration);
                 });
-
-        return RegistrationResponse.builder()
-                .eventId(event.getId())
-                .studentId(student.getId())
-                .registeredAt(now)
-                .build();
     }
 
-    public RegistrationResponse unregisterStudent(UUID eventId, UUID studentId) {
+    public void unregisterStudent(UUID eventId, UUID studentId) {
         User student = userRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
@@ -226,12 +220,6 @@ public class EventService {
 
         registration.setUnregisteredAt(Instant.now());
         registrationRepository.save(registration);
-
-        return RegistrationResponse.builder()
-                .eventId(event.getId())
-                .studentId(student.getId())
-                .unregisteredAt(registration.getUnregisteredAt())
-                .build();
     }
 
     private void validateEventTimes(Event event) {
