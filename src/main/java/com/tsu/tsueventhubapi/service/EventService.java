@@ -10,6 +10,7 @@ import com.tsu.tsueventhubapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,6 +61,8 @@ public class EventService {
                 .manager(manager)
                 .company(company)
                 .build();
+
+        validateEventTimes(event);
 
         Event saved = eventRepository.save(event);
 
@@ -113,8 +116,38 @@ public class EventService {
             event.setRegistrationDeadline(request.getRegistrationDeadline());
         }
 
+        validateEventTimes(event);
+
         Event updated = eventRepository.save(event);
         return toFullResponse(updated);
+    }
+
+    public void deleteEvent(UUID eventId, UUID managerId) {
+        User manager = userRepository.findById(managerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+        
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        
+        if (!event.getCompany().getId().equals(manager.getCompany().getId())) {
+            throw new SecurityException("You cannot delete events from another company");
+        }
+
+        eventRepository.delete(event);
+    }
+
+    private void validateEventTimes(Event event) {
+        Instant startTime = event.getStartTime();
+        Instant endTime = event.getEndTime();
+        Instant registrationDeadline = event.getRegistrationDeadline();
+
+        if (endTime != null && startTime != null && endTime.isBefore(startTime)) {
+            throw new IllegalArgumentException("End time cannot be before start time");
+        }
+
+        if (registrationDeadline != null && startTime != null && registrationDeadline.isAfter(startTime)) {
+            throw new IllegalArgumentException("Registration deadline cannot be after event start time");
+        }
     }
 
     private EventResponseSummary toSummaryResponse(Event event) {

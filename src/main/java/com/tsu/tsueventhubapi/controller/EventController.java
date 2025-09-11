@@ -185,6 +185,11 @@ public class EventController {
                     responseCode = "404",
                     description = "Событие не найдено",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     public ResponseEntity<EventResponseFull> updateEvent(
@@ -194,5 +199,41 @@ public class EventController {
 
         EventResponseFull response = eventService.updateEvent(id, currentUser.getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Удаление события", description = "Удаление события менеджером (через TelegramBot)")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Событие успешно удалено"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Нет прав на удаление события", 
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Событие не найдено", 
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Void> deleteEvent(
+            @PathVariable UUID id, 
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+        eventService.deleteEvent(id,  currentUser.getId());
+        return ResponseEntity.ok().build();
     }
 }
