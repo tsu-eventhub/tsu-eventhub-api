@@ -7,6 +7,7 @@ on:
 env:
   JAVA_VERSION: '21'
   DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/tsu-eventhub-api
+  DEPLOY_USERNAME: 'deployuser'
 
 jobs:
   build-and-deploy:
@@ -53,7 +54,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: deployuser
+          username: ${{ env.DEPLOY_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -69,17 +70,17 @@ jobs:
             docker rm tsu-eventhub-api || true
 
             echo "🚀 Launching a new container with secrets from server environment..."
-            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/deployuser/tsu-eventhub.env --network tsu-eventhub_net ${{ env.DOCKER_IMAGE }}:latest
+            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network tsu-eventhub_net ${{ env.DOCKER_IMAGE }}:latest
 
       - name: 🛠 Rollback
         if: failure()
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: deployuser
+          username: ${{ env.DEPLOY_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "⚠️ Deployment error. Rollback to previous container..."
             docker stop tsu-eventhub-api || true
             docker rm tsu-eventhub-api || true
-            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/deployuser/tsu-eventhub.env --network tsu-eventhub_net tsu-eventhub-api-backup
+            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network tsu-eventhub_net tsu-eventhub-api-backup
