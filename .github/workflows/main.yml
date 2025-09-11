@@ -70,7 +70,7 @@ jobs:
             docker rm tsu-eventhub-api || true
 
             echo "🚀 Launching a new container with secrets from server environment..."
-            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network tsu-eventhub_net ${{ env.DOCKER_IMAGE }}:latest
+            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network ${{ env.DEPLOY_USERNAME }}_tsu-eventhub_net ${{ env.DOCKER_IMAGE }}:latest
 
       - name: 🛠 Rollback
         if: failure()
@@ -83,4 +83,4 @@ jobs:
             echo "⚠️ Deployment error. Rollback to previous container..."
             docker stop tsu-eventhub-api || true
             docker rm tsu-eventhub-api || true
-            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network tsu-eventhub_net tsu-eventhub-api-backup
+            docker run -d --name tsu-eventhub-api -p 8080:8080 --env-file /home/${{ env.DEPLOY_USERNAME }}/tsu-eventhub.env --network ${{ env.DEPLOY_USERNAME }}_tsu-eventhub_net tsu-eventhub-api-backup
