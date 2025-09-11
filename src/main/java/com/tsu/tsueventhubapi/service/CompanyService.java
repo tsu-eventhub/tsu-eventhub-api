@@ -28,6 +28,10 @@ public class CompanyService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        if (!"APPROVED".equals(user.getStatus().name())) {
+            throw new ForbiddenException("Only approved users can access this resource");
+        }
+
         return getCompaniesForCurrentUser(user);
     }
 

@@ -4,6 +4,7 @@ import com.tsu.tsueventhubapi.dto.*;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.EventService;
+import com.tsu.tsueventhubapi.util.ApprovedOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @RequestMapping("/events")
 @Tag(name = "Events")
 @SecurityRequirement(name = "bearerAuth")
+@ApprovedOnly
 @RequiredArgsConstructor
 public class EventController {
 
@@ -125,7 +127,7 @@ public class EventController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Доступ запрещён (менеджер пытается получить событие чужой компании)",
+                    description = "Доступ запрещён (например, менеджер пытается получить событие чужой компании)",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
@@ -175,7 +177,7 @@ public class EventController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Доступ запрещён (менеджер пытается получить событие чужой компании)",
+                    description = "Доступ запрещён (например, менеджер пытается получить событие чужой компании)",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
@@ -260,7 +262,7 @@ public class EventController {
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Доступ запрещён (менеджер пытается получить студентов чужого события)",
+                    description = "Доступ запрещён (например, менеджер пытается получить студентов чужого события)",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(

@@ -6,6 +6,7 @@ import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.ProfileService;
+import com.tsu.tsueventhubapi.util.ApprovedOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -59,6 +60,7 @@ public class ProfileController {
     }
 
     @PutMapping
+    @ApprovedOnly
     @Operation(
             summary = "Редактирование профиля пользователя",
             description = "Позволяет изменить имя, email и Telegram ID текущего пользователя. "

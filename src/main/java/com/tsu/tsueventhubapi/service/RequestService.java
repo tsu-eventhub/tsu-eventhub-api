@@ -3,6 +3,7 @@ package com.tsu.tsueventhubapi.service;
 import com.tsu.tsueventhubapi.dto.PendingUserResponse;
 import com.tsu.tsueventhubapi.exception.ForbiddenException;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
+import com.tsu.tsueventhubapi.exception.UnauthorizedException;
 import com.tsu.tsueventhubapi.model.ApprovalRequest;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.ApprovalRequestRepository;
@@ -26,21 +27,13 @@ public class RequestService {
     private final ApprovalRequestRepository approvalRequestRepository;
     
     public List<PendingUserResponse> getPendingUsers() {
-        List<ApprovalRequest> requests;
+        User currentUser = getCurrentUser();
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId()).orElseThrow();
-        
-        if (currentUser.getRole().name().equals("DEAN")) {
-            requests = approvalRequestRepository.findByProcessedFalse();
-        } else if (currentUser.getRole().name().equals("MANAGER")) {
-            if (!currentUser.getStatus().name().equals("APPROVED")) {
-                throw new ForbiddenException("Pending managers cannot approve users");
-            }
-            requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany());
-        } else {
-            throw new ForbiddenException("Access Denied");
+        List<ApprovalRequest> requests;
+        switch (currentUser.getRole()) {
+            case DEAN -> requests = approvalRequestRepository.findByProcessedFalse();
+            case MANAGER -> requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany());
+            default -> throw new ForbiddenException("Access Denied");
         }
 
         return requests.stream()
@@ -57,21 +50,21 @@ public class RequestService {
     }
 
     public void approveUser(UUID requestId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
-        
+        User currentUser = getCurrentUser();
         approvalService.approveRequest(currentUser, requestId);
     }
 
     public void rejectUser(UUID requestId, String reason) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-        User currentUser = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
-
+        User currentUser = getCurrentUser();
         approvalService.rejectRequest(currentUser, requestId, reason);
     }
 
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+            throw new UnauthorizedException("Unauthorized");
+        }
+        return userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+    }
 }

@@ -4,6 +4,7 @@ import com.tsu.tsueventhubapi.dto.PendingUserResponse;
 import com.tsu.tsueventhubapi.dto.RejectRequestDto;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.service.RequestService;
+import com.tsu.tsueventhubapi.util.ApprovedOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,6 +23,7 @@ import java.util.UUID;
 @RequestMapping("/requests")
 @Tag(name = "Requests")
 @SecurityRequirement(name = "bearerAuth")
+@ApprovedOnly
 @RestController
 @RequiredArgsConstructor
 public class RequestController {
