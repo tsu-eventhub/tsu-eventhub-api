@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/companies").permitAll()
                         .requestMatchers("/companies/**").authenticated()
                         .requestMatchers("/profile/**").authenticated()
+                        .requestMatchers("/events/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

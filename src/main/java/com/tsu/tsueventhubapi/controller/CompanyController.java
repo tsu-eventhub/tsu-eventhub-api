@@ -7,6 +7,7 @@ import com.tsu.tsueventhubapi.dto.UpdateCompanyRequest;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.CompanyService;
+import com.tsu.tsueventhubapi.util.ApprovedOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -80,6 +81,7 @@ public class CompanyController {
 
     @PostMapping
     @SecurityRequirement(name = "bearerAuth")
+    @ApprovedOnly
     @PreAuthorize("hasRole('DEAN')")
     @Operation(
             summary = "Создание компании",
@@ -121,6 +123,7 @@ public class CompanyController {
 
     @GetMapping("/{id}")
     @SecurityRequirement(name = "bearerAuth")
+    @ApprovedOnly
     @PreAuthorize("hasRole('DEAN') or hasRole('MANAGER')")
     @Operation(
             summary = "Получение информации о компании по ID",
@@ -163,6 +166,7 @@ public class CompanyController {
 
     @PutMapping("/{id}")
     @SecurityRequirement(name = "bearerAuth")
+    @ApprovedOnly
     @PreAuthorize("hasRole('DEAN')")
     @Operation(
             summary = "Редактирование компании",
@@ -210,6 +214,7 @@ public class CompanyController {
 
     @DeleteMapping("/{id}")
     @SecurityRequirement(name = "bearerAuth")
+    @ApprovedOnly
     @PreAuthorize("hasRole('DEAN')")
     @Operation(
             summary = "Удаление компании",

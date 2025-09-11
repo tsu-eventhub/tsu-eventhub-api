@@ -1,11 +1,13 @@
 package com.tsu.tsueventhubapi.controller;
 
+import com.tsu.tsueventhubapi.dto.EventResponseSummary;
 import com.tsu.tsueventhubapi.dto.UpdateProfileRequest;
 import com.tsu.tsueventhubapi.dto.UserResponse;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.ProfileService;
+import com.tsu.tsueventhubapi.util.ApprovedOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,8 +18,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/profile")
@@ -59,9 +64,10 @@ public class ProfileController {
     }
 
     @PutMapping
+    @ApprovedOnly
     @Operation(
             summary = "Редактирование профиля пользователя",
-            description = "Позволяет изменить имя, email и Telegram ID текущего пользователя. "
+            description = "Позволяет изменить имя, email и Telegram Username текущего пользователя. "
                     + "Редактирование доступно только для подтверждённых аккаунтов."
     )
     @ApiResponses(value = {
@@ -99,5 +105,29 @@ public class ProfileController {
 
         return ResponseEntity.ok(UserResponse.fromEntity(updatedUser));
     }
-    
+
+    @GetMapping("/events")
+    @ApprovedOnly
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(
+            summary = "Список событий студента",
+            description = "Возвращает список событий, на которые студент записан и ещё не отменил регистрацию."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Список событий успешно получен"),
+            @ApiResponse(
+                    responseCode = "401", 
+                    description = "Неавторизован", 
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Пользователь не найден", 
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<List<EventResponseSummary>> getStudentEvents(@AuthenticationPrincipal UserDetailsImpl currentUser) {
+        List<EventResponseSummary> events = profileService.getStudentEvents(currentUser.getId());
+        return ResponseEntity.ok(events);
+    }
 }

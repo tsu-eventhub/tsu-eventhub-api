@@ -5,13 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class CompanyResponse {
-    private UUID id;
-    private String name;
+public class RegistrationResponse {
+    private UUID eventId;
+    private UUID studentId;
+    private Instant registeredAt;
+    private Instant unregisteredAt;
 }
