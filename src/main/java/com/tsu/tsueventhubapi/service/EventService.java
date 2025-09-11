@@ -5,8 +5,10 @@ import com.tsu.tsueventhubapi.enumeration.Role;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.Event;
+import com.tsu.tsueventhubapi.model.Registration;
 import com.tsu.tsueventhubapi.model.User;
 import com.tsu.tsueventhubapi.repository.EventRepository;
+import com.tsu.tsueventhubapi.repository.RegistrationRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final RegistrationRepository registrationRepository;
 
     public List<EventResponseSummary> getAllEvents(UUID userId) {
         User user = userRepository.findById(userId)
@@ -159,6 +162,40 @@ public class EventService {
                             .build();
                 })
                 .toList();
+    }
+
+    public RegistrationResponse registerStudent(UUID eventId, UUID studentId) {
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        Instant now = Instant.now();
+        if (event.getRegistrationDeadline() != null && now.isAfter(event.getRegistrationDeadline())) {
+            throw new IllegalStateException("Registration deadline has passed");
+        }
+
+        if (event.getEndTime() != null && now.isAfter(event.getEndTime())) {
+            throw new IllegalStateException("Event has already ended");
+        }
+
+        registrationRepository.findByStudentIdAndEventId(studentId, eventId)
+                .ifPresent(r -> { throw new IllegalStateException("Student is already registered"); });
+
+        Registration registration = Registration.builder()
+                .student(student)
+                .event(event)
+                .registeredAt(now)
+                .build();
+
+        registrationRepository.save(registration);
+
+        return RegistrationResponse.builder()
+                .eventId(event.getId())
+                .studentId(student.getId())
+                .registeredAt(now)
+                .build();
     }
 
     private void validateEventTimes(Event event) {

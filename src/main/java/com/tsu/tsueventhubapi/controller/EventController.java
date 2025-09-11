@@ -281,4 +281,57 @@ public class EventController {
             @AuthenticationPrincipal UserDetailsImpl currentUser) {
         return ResponseEntity.ok(eventService.getStudentsForEvent(id, currentUser.getId()));
     }
+
+    @PostMapping("/{id}/register")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(
+            summary = "Записаться на событие",
+            description = """
+            Позволяет студенту зарегистрироваться на конкретное событие.
+
+            Правила:
+            - Студент может зарегистрироваться только один раз на каждое событие.
+            - Регистрация невозможна после истечения срока регистрации.
+            - Регистрация невозможна, если событие уже завершилось.
+            """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Регистрация успешна",
+                    content = @Content(schema = @Schema(implementation = RegistrationResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Ошибка валидации (например, уже зарегистрирован, срок регистрации истёк)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Событие не найдено",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Внутренняя ошибка сервера",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<RegistrationResponse> registerForEvent(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        RegistrationResponse response = eventService.registerStudent(id, currentUser.getId());
+        return ResponseEntity.ok(response);
+    }
 }
