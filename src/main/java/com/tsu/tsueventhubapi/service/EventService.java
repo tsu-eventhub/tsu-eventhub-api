@@ -1,9 +1,6 @@
 package com.tsu.tsueventhubapi.service;
 
-import com.tsu.tsueventhubapi.dto.CompanyResponse;
-import com.tsu.tsueventhubapi.dto.CreateEventRequest;
-import com.tsu.tsueventhubapi.dto.EventResponseFull;
-import com.tsu.tsueventhubapi.dto.EventResponseSummary;
+import com.tsu.tsueventhubapi.dto.*;
 import com.tsu.tsueventhubapi.exception.ResourceNotFoundException;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.Event;
@@ -85,7 +82,41 @@ public class EventService {
 
         return toFullResponse(event);
     }
-    
+
+    public EventResponseFull updateEvent(UUID eventId, UUID managerId, UpdateEventRequest request) {
+        User manager = userRepository.findById(managerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        
+        if (event.getCompany() == null || !event.getCompany().getId().equals(manager.getCompany().getId())) {
+            throw new IllegalStateException("Manager can only update events of their own company");
+        }
+        
+        if (request.getTitle() != null) {
+            event.setTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            event.setDescription(request.getDescription());
+        }
+        if (request.getStartTime() != null) {
+            event.setStartTime(request.getStartTime());
+        }
+        if (request.getEndTime() != null) {
+            event.setEndTime(request.getEndTime());
+        }
+        if (request.getLocation() != null) {
+            event.setLocation(request.getLocation());
+        }
+        if (request.getRegistrationDeadline() != null) {
+            event.setRegistrationDeadline(request.getRegistrationDeadline());
+        }
+
+        Event updated = eventRepository.save(event);
+        return toFullResponse(updated);
+    }
+
     private EventResponseSummary toSummaryResponse(Event event) {
         return EventResponseSummary.builder()
                 .id(event.getId())

@@ -3,6 +3,7 @@ package com.tsu.tsueventhubapi.controller;
 import com.tsu.tsueventhubapi.dto.CreateEventRequest;
 import com.tsu.tsueventhubapi.dto.EventResponseFull;
 import com.tsu.tsueventhubapi.dto.EventResponseSummary;
+import com.tsu.tsueventhubapi.dto.UpdateEventRequest;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import com.tsu.tsueventhubapi.service.EventService;
@@ -147,5 +148,51 @@ public class EventController {
 
         EventResponseFull event = eventService.getEventById(id, currentUser.getId());
         return ResponseEntity.ok(event);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    @Operation(
+            summary = "Обновление события",
+            description = """
+            Доступно только для менеджеров.
+            Поддерживает вызовы через TelegramBot (по токену авторизованного менеджера).
+            Обновляет данные события, принадлежащего компании менеджера.
+            """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Событие успешно обновлено",
+                    content = @Content(schema = @Schema(implementation = EventResponseFull.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Ошибка валидации данных",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Неавторизован",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Доступ запрещён (менеджер пытается получить событие чужой компании)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Событие не найдено",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    public ResponseEntity<EventResponseFull> updateEvent(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateEventRequest request,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        EventResponseFull response = eventService.updateEvent(id, currentUser.getId(), request);
+        return ResponseEntity.ok(response);
     }
 }
