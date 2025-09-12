@@ -12,6 +12,9 @@ import com.tsu.tsueventhubapi.repository.CompanyRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,40 +27,41 @@ public class CompanyService {
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
 
-    public List<CompanyResponse> getCompaniesForUser(UUID userId) {
+    public Page<CompanyResponse> getCompaniesForUser(UUID userId, int page, int size) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!"APPROVED".equals(user.getStatus().name())) {
             throw new ForbiddenException("Only approved users can access this resource");
         }
-
-        return getCompaniesForCurrentUser(user);
+        
+        return getCompaniesForCurrentUser(user, page, size);
     }
 
-    public List<CompanyResponse> getCompaniesForCurrentUser(User user) {
+    public Page<CompanyResponse> getCompaniesForCurrentUser(User user, int page, int size) {
         if (user.getRole() == Role.DEAN) {
-            return getAllCompanies();
+            return getAllCompanies(page, size);
         }
 
         if (user.getRole() == Role.MANAGER || user.getRole() == Role.STUDENT) {
             throw new ForbiddenException("Access Denied");
         }
         
-        return List.of();
+        return Page.empty();
     }
 
-    public List<CompanyResponse> getCompaniesForRegistration() {
-        return getAllCompanies();
+    public Page<CompanyResponse> getCompaniesForRegistration(int page, int size) {
+        return getAllCompanies(page, size);
     }
 
-    private List<CompanyResponse> getAllCompanies() {
-        return companyRepository.findAll().stream()
-                .map(c -> CompanyResponse.builder()
-                        .id(c.getId())
-                        .name(c.getName())
-                        .build())
-                .toList();
+    private Page<CompanyResponse> getAllCompanies(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Company> companiesPage = companyRepository.findAll(pageable);
+
+        return companiesPage.map(c -> CompanyResponse.builder()
+                .id(c.getId())
+                .name(c.getName())
+                .build());
     }
 
     public CompanyResponse createCompany(CreateCompanyRequest request) {
