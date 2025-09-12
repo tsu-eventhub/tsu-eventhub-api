@@ -1,5 +1,6 @@
 package com.tsu.tsueventhubapi.controller;
 
+import com.tsu.tsueventhubapi.dto.PendingUserPageResponse;
 import com.tsu.tsueventhubapi.dto.PendingUserResponse;
 import com.tsu.tsueventhubapi.dto.RejectRequestDto;
 import com.tsu.tsueventhubapi.exception.ErrorResponse;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +42,7 @@ public class RequestController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Список неподтверждённых пользователей успешно получен",
-                    content = @Content(schema = @Schema(implementation = PendingUserResponse.class))),
+                    content = @Content(schema = @Schema(implementation = PendingUserPageResponse.class))),
             @ApiResponse(
                     responseCode = "401",
                     description = "Неавторизован",
@@ -54,8 +56,11 @@ public class RequestController {
                     description = "Внутренняя ошибка сервера",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    public List<PendingUserResponse> getPendingUsers() {
-        return requestService.getPendingUsers();
+    public Page<PendingUserResponse> getPendingUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return requestService.getPendingUsers(page, size);
     }
 
     @PostMapping("/{id}/approve")

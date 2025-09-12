@@ -1,6 +1,7 @@
 package com.tsu.tsueventhubapi.controller;
 
 
+import com.tsu.tsueventhubapi.dto.CompanyPageResponse;
 import com.tsu.tsueventhubapi.dto.CompanyResponse;
 import com.tsu.tsueventhubapi.dto.CreateCompanyRequest;
 import com.tsu.tsueventhubapi.dto.UpdateCompanyRequest;
@@ -17,12 +18,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -49,7 +50,7 @@ public class CompanyController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Список компаний успешно получен",
-                    content = @Content(schema = @Schema(implementation = CompanyResponse.class))
+                    content = @Content(schema = @Schema(implementation = CompanyPageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -67,13 +68,16 @@ public class CompanyController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<List<CompanyResponse>> getCompanies(@AuthenticationPrincipal UserDetailsImpl currentUser) {
-        List<CompanyResponse> companies;
+    public ResponseEntity<Page<CompanyResponse>> getCompanies(
+            @AuthenticationPrincipal UserDetailsImpl currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<CompanyResponse> companies;
 
         if (currentUser != null) {
-            companies = companyService.getCompaniesForUser(currentUser.getId());
+            companies = companyService.getCompaniesForUser(currentUser.getId(), page, size);
         } else {
-            companies = companyService.getCompaniesForRegistration();
+            companies = companyService.getCompaniesForRegistration(page, size);
         }
 
         return ResponseEntity.ok(companies);
