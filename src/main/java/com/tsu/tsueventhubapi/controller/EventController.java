@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,7 +47,7 @@ public class EventController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Список событий успешно получен",
-                    content = @Content(schema = @Schema(implementation = EventResponseSummary.class))
+                    content = @Content(schema = @Schema(implementation = EventPageResponseSummary.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -59,8 +60,12 @@ public class EventController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<List<EventResponseSummary>> getAllEvents(@AuthenticationPrincipal UserDetailsImpl currentUser) {
-        return ResponseEntity.ok(eventService.getAllEvents(currentUser.getId()));
+    public ResponseEntity<Page<EventResponseSummary>> getAllEvents(
+            @AuthenticationPrincipal UserDetailsImpl currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<EventResponseSummary> events = eventService.getAllEvents(currentUser.getId(), page, size);
+        return ResponseEntity.ok(events);
     }
 
     @PostMapping
@@ -253,7 +258,7 @@ public class EventController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Список студентов успешно получен",
-                    content = @Content(schema = @Schema(implementation = StudentResponse.class))
+                    content = @Content(schema = @Schema(implementation = StudentPageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -276,10 +281,12 @@ public class EventController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<List<StudentResponse>> getStudents(
+    public ResponseEntity<Page<StudentResponse>> getStudents(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserDetailsImpl currentUser) {
-        return ResponseEntity.ok(eventService.getStudentsForEvent(id, currentUser.getId()));
+            @AuthenticationPrincipal UserDetailsImpl currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getStudentsForEvent(id, currentUser.getId(), page, size));
     }
 
     @PostMapping("/{id}/register")

@@ -11,6 +11,9 @@ import com.tsu.tsueventhubapi.repository.EventRepository;
 import com.tsu.tsueventhubapi.repository.RegistrationRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -25,25 +28,24 @@ public class EventService {
     private final UserRepository userRepository;
     private final RegistrationRepository registrationRepository;
 
-    public List<EventResponseSummary> getAllEvents(UUID userId) {
+    public Page<EventResponseSummary> getAllEvents(UUID userId, int page, int size) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        List<Event> events;
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Event> events;
         
         if (user.getRole().toString().contains("MANAGER")) {
             Company company = user.getCompany();
             if (company == null) {
                 throw new IllegalStateException("Manager is not assigned to any company");
             }
-            events = eventRepository.findByCompanyId(company.getId());
+            events = eventRepository.findByCompanyId(company.getId(), pageable);
         } else {
-            events = eventRepository.findAll();
+            events = eventRepository.findAll(pageable);
         }
 
-        return events.stream()
-                .map(this::toSummaryResponse)
-                .toList();
+        return events.map(this::toSummaryResponse);
     }
 
     public EventResponseFull createEvent(CreateEventRequest request, UUID managerId) {
@@ -140,7 +142,7 @@ public class EventService {
         eventRepository.delete(event);
     }
 
-    public List<StudentResponse> getStudentsForEvent(UUID eventId, UUID userId) {
+    public Page<StudentResponse> getStudentsForEvent(UUID eventId, UUID userId, int page, int size) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
@@ -152,8 +154,8 @@ public class EventService {
             throw new SecurityException("You cannot access students of an event you did not create");
         }
 
-        return event.getRegistrations().stream()
-                .filter(reg -> reg.getUnregisteredAt() == null)
+        Pageable pageable = PageRequest.of(page, size);
+        return registrationRepository.findByEventIdAndUnregisteredAtIsNull(eventId, pageable)
                 .map(reg -> {
                     User student = reg.getStudent();
                     return StudentResponse.builder()
@@ -161,8 +163,7 @@ public class EventService {
                             .name(student.getName())
                             .email(student.getEmail())
                             .build();
-                })
-                .toList();
+                });
     }
 
     public void registerStudent(UUID eventId, UUID studentId) {
