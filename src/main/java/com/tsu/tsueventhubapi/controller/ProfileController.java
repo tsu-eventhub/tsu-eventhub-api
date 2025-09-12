@@ -1,5 +1,6 @@
 package com.tsu.tsueventhubapi.controller;
 
+import com.tsu.tsueventhubapi.dto.EventPageResponseSummary;
 import com.tsu.tsueventhubapi.dto.EventResponseSummary;
 import com.tsu.tsueventhubapi.dto.UpdateProfileRequest;
 import com.tsu.tsueventhubapi.dto.UserResponse;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -116,18 +118,26 @@ public class ProfileController {
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200", 
-                    description = "Список событий успешно получен"),
+                    description = "Список событий успешно получен",
+                    content = @Content(schema = @Schema(implementation = EventPageResponseSummary.class))
+            ),
+            
             @ApiResponse(
                     responseCode = "401", 
                     description = "Неавторизован", 
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
             @ApiResponse(
                     responseCode = "404", 
                     description = "Пользователь не найден", 
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
-    public ResponseEntity<List<EventResponseSummary>> getStudentEvents(@AuthenticationPrincipal UserDetailsImpl currentUser) {
-        List<EventResponseSummary> events = profileService.getStudentEvents(currentUser.getId());
+    public ResponseEntity<Page<EventResponseSummary>> getStudentEvents(
+            @AuthenticationPrincipal UserDetailsImpl currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<EventResponseSummary> events = profileService.getStudentEvents(currentUser.getId(), page, size);
         return ResponseEntity.ok(events);
     }
 }

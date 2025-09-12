@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface RegistrationRepository extends JpaRepository<Registration, UUID> {
     Optional<Registration> findByStudentIdAndEventId(UUID studentId, UUID eventId);
 
-    List<Registration> findByStudentIdAndUnregisteredAtIsNull(UUID studentId);
+    Page<Registration> findByStudentIdAndUnregisteredAtIsNull(UUID studentId, Pageable pageable);
 
     Page<Registration> findByEventIdAndUnregisteredAtIsNull(UUID eventId, Pageable pageable);
 }

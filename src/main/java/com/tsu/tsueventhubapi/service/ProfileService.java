@@ -11,6 +11,9 @@ import com.tsu.tsueventhubapi.repository.RegistrationRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -50,25 +53,24 @@ public class ProfileService {
         return userRepository.save(user);
     }
 
-    public List<EventResponseSummary> getStudentEvents(UUID studentId) {
+    public Page<EventResponseSummary> getStudentEvents(UUID studentId, int page, int size) {
         userRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        List<Registration> registrations = registrationRepository.findByStudentIdAndUnregisteredAtIsNull(studentId);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Registration> registrations = registrationRepository.findByStudentIdAndUnregisteredAtIsNull(studentId, pageable);
 
-        return registrations.stream()
-                .map(reg -> {
-                    var event = reg.getEvent();
-                    return EventResponseSummary.builder()
-                            .id(event.getId())
-                            .title(event.getTitle())
-                            .startTime(event.getStartTime())
-                            .location(event.getLocation())
-                            .company(event.getCompany() != null
-                                    ? new CompanyResponse(event.getCompany().getId(), event.getCompany().getName())
-                                    : null)
-                            .build();
-                })
-                .collect(Collectors.toList());
+        return registrations.map(reg -> {
+            var event = reg.getEvent();
+            return EventResponseSummary.builder()
+                    .id(event.getId())
+                    .title(event.getTitle())
+                    .startTime(event.getStartTime())
+                    .location(event.getLocation())
+                    .company(event.getCompany() != null
+                            ? new CompanyResponse(event.getCompany().getId(), event.getCompany().getName())
+                            : null)
+                    .build();
+        });
     }
 }
