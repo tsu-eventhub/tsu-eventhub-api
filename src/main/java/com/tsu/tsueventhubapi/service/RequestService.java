@@ -9,6 +9,9 @@ import com.tsu.tsueventhubapi.repository.ApprovalRequestRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,35 +28,33 @@ public class RequestService {
     private final UserRepository userRepository;
     private final ApprovalRequestRepository approvalRequestRepository;
     
-    public List<PendingUserResponse> getPendingUsers() {
-        List<ApprovalRequest> requests;
+    public Page<PendingUserResponse> getPendingUsers(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ApprovalRequest> requests;
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
         User currentUser = userRepository.findById(userDetails.getId()).orElseThrow();
         
         if (currentUser.getRole().name().equals("DEAN")) {
-            requests = approvalRequestRepository.findByProcessedFalse();
+            requests = approvalRequestRepository.findByProcessedFalseAndUser_DeletedAtIsNull(pageable);
         } else if (currentUser.getRole().name().equals("MANAGER")) {
             if (!currentUser.getStatus().name().equals("APPROVED")) {
                 throw new ForbiddenException("Pending managers cannot approve users");
             }
-            requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany());
+            requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany(),  pageable);
         } else {
             throw new ForbiddenException("Access Denied");
         }
 
-        return requests.stream()
-                .filter(r -> r.getUser().getDeletedAt() == null)
-                .map(r -> new PendingUserResponse(
-                        r.getId(),
-                        r.getUser().getName(),
-                        r.getUser().getEmail(),
-                        r.getUser().getRole(),
-                        r.getUser().getTelegramUsername(),
-                        r.getUser().getCompany() != null ? r.getUser().getCompany().getName() : null
-                ))
-                .collect(Collectors.toList());
+        return requests.map(r -> new PendingUserResponse(
+                r.getId(),
+                r.getUser().getName(),
+                r.getUser().getEmail(),
+                r.getUser().getRole(),
+                r.getUser().getTelegramUsername(),
+                r.getUser().getCompany() != null ? r.getUser().getCompany().getName() : null
+        ));
     }
 
     public void approveUser(UUID requestId) {

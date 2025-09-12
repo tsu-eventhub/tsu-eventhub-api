@@ -3,6 +3,8 @@ package com.tsu.tsueventhubapi.repository;
 import com.tsu.tsueventhubapi.model.ApprovalRequest;
 import com.tsu.tsueventhubapi.model.Company;
 import com.tsu.tsueventhubapi.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -10,9 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest, UUID> {
-    List<ApprovalRequest> findByProcessedFalse();
+    Page<ApprovalRequest> findByProcessedFalseAndUser_DeletedAtIsNull(Pageable pageable);
 
-    List<ApprovalRequest> findByProcessedFalseAndUser_Company(Company company);
-
-    Optional<ApprovalRequest> findByUser(User user);
+    Page<ApprovalRequest> findByProcessedFalseAndUser_Company(Company company, Pageable pageable);
 }
