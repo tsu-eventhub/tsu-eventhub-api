@@ -10,6 +10,9 @@ import com.tsu.tsueventhubapi.repository.ApprovalRequestRepository;
 import com.tsu.tsueventhubapi.repository.UserRepository;
 import com.tsu.tsueventhubapi.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,27 +29,25 @@ public class RequestService {
     private final UserRepository userRepository;
     private final ApprovalRequestRepository approvalRequestRepository;
     
-    public List<PendingUserResponse> getPendingUsers() {
+    public Page<PendingUserResponse> getPendingUsers(int page, int size) {
         User currentUser = getCurrentUser();
 
-        List<ApprovalRequest> requests;
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ApprovalRequest> requests;
         switch (currentUser.getRole()) {
-            case DEAN -> requests = approvalRequestRepository.findByProcessedFalse();
-            case MANAGER -> requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany());
+            case DEAN -> requests = approvalRequestRepository.findByProcessedFalseAndUser_DeletedAtIsNull(pageable);
+            case MANAGER -> requests = approvalRequestRepository.findByProcessedFalseAndUser_Company(currentUser.getCompany(), pageable);
             default -> throw new ForbiddenException("Access Denied");
         }
 
-        return requests.stream()
-                .filter(r -> r.getUser().getDeletedAt() == null)
-                .map(r -> new PendingUserResponse(
-                        r.getId(),
-                        r.getUser().getName(),
-                        r.getUser().getEmail(),
-                        r.getUser().getRole(),
-                        r.getUser().getTelegramUsername(),
-                        r.getUser().getCompany() != null ? r.getUser().getCompany().getName() : null
-                ))
-                .collect(Collectors.toList());
+        return requests.map(r -> new PendingUserResponse(
+                r.getId(),
+                r.getUser().getName(),
+                r.getUser().getEmail(),
+                r.getUser().getRole(),
+                r.getUser().getTelegramUsername(),
+                r.getUser().getCompany() != null ? r.getUser().getCompany().getName() : null
+        ));
     }
 
     public void approveUser(UUID requestId) {
